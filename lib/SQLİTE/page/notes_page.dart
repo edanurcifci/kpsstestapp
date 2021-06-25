@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:kpssapp/SQLİTE/db/notes_database.dart';
+import 'package:kpssapp/SQLİTE/model/note.dart';
+import 'package:kpssapp/SQLİTE/page/edit_note_page.dart';
+import 'package:kpssapp/SQLİTE/page/note_detail_page.dart';
+import 'package:kpssapp/SQLİTE/widget/note_card_widget.dart';
+
+class Notes_page extends StatefulWidget {
+  @override
+  _Notes_pageState createState() => _Notes_pageState();
+}
+
+class _Notes_pageState extends State<Notes_page> {
+  late List<Note> notes;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    refreshNotes();
+  }
+
+  @override
+  void dispose() {
+    NotesDatabase.instance.close();
+
+    super.dispose();
+  }
+
+  Future refreshNotes() async {
+    setState(() => isLoading = true);
+
+    this.notes = await NotesDatabase.instance.readAllNotes();
+
+    setState(() => isLoading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(
+        'YAPILACAKLAR',
+        style: TextStyle(fontSize: 24),
+      ),
+      actions: [Icon(Icons.search), SizedBox(width: 12)],
+    ),
+    body: Center(
+      child: isLoading
+          ? CircularProgressIndicator()
+          : notes.isEmpty
+          ? Text(
+        'No Notes',
+        style: TextStyle(color: Colors.white, fontSize: 24),
+      )
+          : buildNotes(),
+    ),
+    floatingActionButton: FloatingActionButton(
+      backgroundColor: Colors.purpleAccent,
+      child: Icon(Icons.add),
+      onPressed: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => AddEditNotePage()),
+        );
+
+        refreshNotes();
+      },
+    ),
+  );
+  Widget buildNotes() => StaggeredGridView.countBuilder(
+    padding: EdgeInsets.all(8),
+    itemCount: notes.length,
+    staggeredTileBuilder: (index) => StaggeredTile.fit(2),
+    crossAxisCount: 4,
+    mainAxisSpacing: 4,
+    crossAxisSpacing: 4,
+    itemBuilder: (context, index) {
+      final note = notes[index];
+
+      return GestureDetector(
+        onTap: () async {
+          await Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => NoteDetailPage(noteId: note.id!),
+          ));
+
+          refreshNotes();
+        },
+        child: NoteCardWidget(note: note, index: index),
+      );
+    },
+  );
+}
